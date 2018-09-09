@@ -123,32 +123,7 @@ public class DefaultImageRaster extends ImageRaster {
         }
         
         // Check flags for grayscale
-        if (codec.isGray) {
-            float gray = color.r * 0.27f + color.g * 0.67f + color.b * 0.06f;
-            color = new ColorRGBA(gray, gray, gray, color.a);
-        }
-
-        switch (codec.type) {
-            case ImageCodec.FLAG_F16:
-                components[0] = (int) FastMath.convertFloatToHalf(color.a);
-                components[1] = (int) FastMath.convertFloatToHalf(color.r);
-                components[2] = (int) FastMath.convertFloatToHalf(color.g);
-                components[3] = (int) FastMath.convertFloatToHalf(color.b);
-                break;
-            case ImageCodec.FLAG_F32:
-                components[0] = (int) Float.floatToIntBits(color.a);
-                components[1] = (int) Float.floatToIntBits(color.r);
-                components[2] = (int) Float.floatToIntBits(color.g);
-                components[3] = (int) Float.floatToIntBits(color.b);
-                break;
-            case 0:
-                // Convert color to bits by multiplying by size
-                components[0] = Math.min( (int) (color.a * codec.maxAlpha + 0.5f), codec.maxAlpha);
-                components[1] = Math.min( (int) (color.r * codec.maxRed + 0.5f), codec.maxRed);
-                components[2] = Math.min( (int) (color.g * codec.maxGreen + 0.5f), codec.maxGreen);
-                components[3] = Math.min( (int) (color.b * codec.maxBlue + 0.5f), codec.maxBlue);
-                break;
-        }     
+        checkFlagsForGrayScale(color, components, codec);
         codec.writeComponents(getBuffer(), x, y, width, offset, components, temp);
         image.setUpdateNeeded();
     }
