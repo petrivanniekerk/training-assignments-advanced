@@ -74,7 +74,7 @@ import java.util.ArrayList;
  *
  * @author Kirill Vainer
  */
-public class Mesh implements Savable, Cloneable, JmeCloneable {
+public class Mesh {
 
     /**
      * The mode of the Mesh specifies both the type of primitive represented
@@ -167,28 +167,28 @@ public class Mesh implements Savable, Cloneable, JmeCloneable {
      * The bounding volume that contains the mesh entirely.
      * By default a BoundingBox (AABB).
      */
-    private BoundingVolume meshBound =  new BoundingBox();
+    protected BoundingVolume meshBound =  new BoundingBox();
 
-    private CollisionData collisionTree = null;
+    protected CollisionData collisionTree = null;
 
-    private SafeArrayList<VertexBuffer> buffersList = new SafeArrayList<VertexBuffer>(VertexBuffer.class);
-    private IntMap<VertexBuffer> buffers = new IntMap<VertexBuffer>();
-    private VertexBuffer[] lodLevels;
-    private float pointSize = 1;
+    protected SafeArrayList<VertexBuffer> buffersList = new SafeArrayList<VertexBuffer>(VertexBuffer.class);
+    protected IntMap<VertexBuffer> buffers = new IntMap<VertexBuffer>();
+    protected VertexBuffer[] lodLevels;
+    protected float pointSize = 1;
     private float lineWidth = 1;
 
-    private transient int vertexArrayID = -1;
+    protected transient int vertexArrayID = -1;
 
-    private int vertCount = -1;
-    private int elementCount = -1;
-    private int instanceCount = -1;
-    private int patchVertexCount=3; //only used for tesselation
-    private int maxNumWeights = -1; // only if using skeletal animation
+    protected int vertCount = -1;
+    protected int elementCount = -1;
+    protected int instanceCount = -1;
+    protected int patchVertexCount=3; //only used for tesselation
+    protected int maxNumWeights = -1; // only if using skeletal animation
 
-    private int[] elementLengths;
-    private int[] modeStart;
+    protected int[] elementLengths;
+    protected int[] modeStart;
 
-    private Mode mode = Mode.Triangles;
+    protected Mode mode = Mode.Triangles;
 
     /**
      * Creates a new mesh with no {@link VertexBuffer vertex buffers}.
@@ -196,141 +196,6 @@ public class Mesh implements Savable, Cloneable, JmeCloneable {
     public Mesh(){
     }
 
-    /**
-     * Create a shallow clone of this Mesh. The {@link VertexBuffer vertex
-     * buffers} are shared between this and the clone mesh, the rest
-     * of the data is cloned.
-     *
-     * @return A shallow clone of the mesh
-     */
-    @Override
-    public Mesh clone() {
-        try {
-            Mesh clone = (Mesh) super.clone();
-            clone.meshBound = meshBound.clone();
-            clone.collisionTree = collisionTree != null ? collisionTree : null;
-            clone.buffers = buffers.clone();
-            clone.buffersList = new SafeArrayList<VertexBuffer>(VertexBuffer.class,buffersList);
-            clone.vertexArrayID = -1;
-            if (elementLengths != null) {
-                clone.elementLengths = elementLengths.clone();
-            }
-            if (modeStart != null) {
-                clone.modeStart = modeStart.clone();
-            }
-            return clone;
-        } catch (CloneNotSupportedException ex) {
-            throw new AssertionError();
-        }
-    }
-
-    /**
-     * Creates a deep clone of this mesh.
-     * The {@link VertexBuffer vertex buffers} and the data inside them
-     * is cloned.
-     *
-     * @return a deep clone of this mesh.
-     */
-    public Mesh deepClone(){
-        try{
-            Mesh clone = (Mesh) super.clone();
-            clone.meshBound = meshBound != null ? meshBound.clone() : null;
-
-            // TODO: Collision tree cloning
-            //clone.collisionTree = collisionTree != null ? collisionTree : null;
-            clone.collisionTree = null; // it will get re-generated in any case
-
-            clone.buffers = new IntMap<VertexBuffer>();
-            clone.buffersList = new SafeArrayList<VertexBuffer>(VertexBuffer.class);
-            for (VertexBuffer vb : buffersList.getArray()){
-                VertexBuffer bufClone = vb.clone();
-                clone.buffers.put(vb.getBufferType().ordinal(), bufClone);
-                clone.buffersList.add(bufClone);
-            }
-
-            clone.vertexArrayID = -1;
-            clone.vertCount = vertCount;
-            clone.elementCount = elementCount;
-            clone.instanceCount = instanceCount;
-
-            // although this could change
-            // if the bone weight/index buffers are modified
-            clone.maxNumWeights = maxNumWeights;
-
-            clone.elementLengths = elementLengths != null ? elementLengths.clone() : null;
-            clone.modeStart = modeStart != null ? modeStart.clone() : null;
-            return clone;
-        }catch (CloneNotSupportedException ex){
-            throw new AssertionError();
-        }
-    }
-
-    /**
-     * Clone the mesh for animation use.
-     * This creates a shallow clone of the mesh, sharing most
-     * of the {@link VertexBuffer vertex buffer} data, however the
-     * {@link Type#Position}, {@link Type#Normal}, and {@link Type#Tangent} buffers
-     * are deeply cloned.
-     *
-     * @return A clone of the mesh for animation use.
-     */
-    public Mesh cloneForAnim(){
-        Mesh clone = clone();
-        if (getBuffer(Type.BindPosePosition) != null){
-            VertexBuffer oldPos = getBuffer(Type.Position);
-
-            // NOTE: creates deep clone
-            VertexBuffer newPos = oldPos.clone();
-            clone.clearBuffer(Type.Position);
-            clone.setBuffer(newPos);
-
-            if (getBuffer(Type.BindPoseNormal) != null){
-                VertexBuffer oldNorm = getBuffer(Type.Normal);
-                VertexBuffer newNorm = oldNorm.clone();
-                clone.clearBuffer(Type.Normal);
-                clone.setBuffer(newNorm);
-
-                if (getBuffer(Type.BindPoseTangent) != null){
-                    VertexBuffer oldTang = getBuffer(Type.Tangent);
-                    VertexBuffer newTang = oldTang.clone();
-                    clone.clearBuffer(Type.Tangent);
-                    clone.setBuffer(newTang);
-                }
-            }
-        }
-        return clone;
-    }
-
-    /**
-     *  Called internally by com.jme3.util.clone.Cloner.  Do not call directly.
-     */
-    @Override
-    public Mesh jmeClone() {
-        try {
-            Mesh clone = (Mesh)super.clone();
-            clone.vertexArrayID = -1;
-            return clone;
-        } catch (CloneNotSupportedException ex) {
-            throw new AssertionError();
-        }
-    }
-
-    /**
-     *  Called internally by com.jme3.util.clone.Cloner.  Do not call directly.
-     */
-    @Override
-    public void cloneFields( Cloner cloner, Object original ) {
-
-        // Probably could clone this now but it will get regenerated anyway.
-        this.collisionTree = null;
-
-        this.meshBound = cloner.clone(meshBound);
-        this.buffersList = cloner.clone(buffersList);
-        this.buffers = cloner.clone(buffers);
-        this.lodLevels = cloner.clone(lodLevels);
-        this.elementLengths = cloner.clone(elementLengths);
-        this.modeStart = cloner.clone(modeStart);
-    }
 
     /**
      * Generates the {@link Type#BindPosePosition}, {@link Type#BindPoseNormal},
@@ -1423,89 +1288,6 @@ public class Mesh implements Savable, Cloneable, JmeCloneable {
     public int getPatchVertexCount() {
         return patchVertexCount;
     }
-
-    public void write(JmeExporter ex) throws IOException {
-        OutputCapsule out = ex.getCapsule(this);
-
-//        HashMap<String, VertexBuffer> map = new HashMap<String, VertexBuffer>();
-//        for (Entry<VertexBuffer> buf : buffers){
-//            if (buf.getValue() != null)
-//                map.put(buf.getKey()+"a", buf.getValue());
-//        }
-//        out.writeStringSavableMap(map, "buffers", null);
-
-        out.write(meshBound, "modelBound", null);
-        out.write(vertCount, "vertCount", -1);
-        out.write(elementCount, "elementCount", -1);
-        out.write(instanceCount, "instanceCount", -1);
-        out.write(maxNumWeights, "max_num_weights", -1);
-        out.write(mode, "mode", Mode.Triangles);
-        out.write(collisionTree, "collisionTree", null);
-        out.write(elementLengths, "elementLengths", null);
-        out.write(modeStart, "modeStart", null);
-        out.write(pointSize, "pointSize", 1f);
-
-        //Removing HW skinning buffers to not save them
-        VertexBuffer hwBoneIndex = null;
-        VertexBuffer hwBoneWeight = null;
-        hwBoneIndex = getBuffer(Type.HWBoneIndex);
-        if (hwBoneIndex != null) {
-            buffers.remove(Type.HWBoneIndex.ordinal());
-        }
-        hwBoneWeight = getBuffer(Type.HWBoneWeight);
-        if (hwBoneWeight != null) {
-            buffers.remove(Type.HWBoneWeight.ordinal());
-        }
-
-        out.writeIntSavableMap(buffers, "buffers", null);
-
-        //restoring Hw skinning buffers.
-        if (hwBoneIndex != null) {
-            buffers.put(hwBoneIndex.getBufferType().ordinal(), hwBoneIndex);
-        }
-        if (hwBoneWeight != null) {
-            buffers.put(hwBoneWeight.getBufferType().ordinal(), hwBoneWeight);
-        }
-
-        out.write(lodLevels, "lodLevels", null);
-    }
-
-    public void read(JmeImporter im) throws IOException {
-        InputCapsule in = im.getCapsule(this);
-        meshBound = (BoundingVolume) in.readSavable("modelBound", null);
-        vertCount = in.readInt("vertCount", -1);
-        elementCount = in.readInt("elementCount", -1);
-        instanceCount = in.readInt("instanceCount", -1);
-        maxNumWeights = in.readInt("max_num_weights", -1);
-        mode = in.readEnum("mode", Mode.class, Mode.Triangles);
-        elementLengths = in.readIntArray("elementLengths", null);
-        modeStart = in.readIntArray("modeStart", null);
-        collisionTree = (BIHTree) in.readSavable("collisionTree", null);
-        elementLengths = in.readIntArray("elementLengths", null);
-        modeStart = in.readIntArray("modeStart", null);
-        pointSize = in.readFloat("pointSize", 1f);
-
-//        in.readStringSavableMap("buffers", null);
-        buffers = (IntMap<VertexBuffer>) in.readIntSavableMap("buffers", null);
-        for (Entry<VertexBuffer> entry : buffers){
-            buffersList.add(entry.getValue());
-        }
-
-        //creating hw animation buffers empty so that they are put in the cache
-        if(isAnimated()){
-            VertexBuffer hwBoneIndex = new VertexBuffer(Type.HWBoneIndex);
-            hwBoneIndex.setUsage(Usage.CpuOnly);
-            setBuffer(hwBoneIndex);
-            VertexBuffer hwBoneWeight = new VertexBuffer(Type.HWBoneWeight);
-            hwBoneWeight.setUsage(Usage.CpuOnly);
-            setBuffer(hwBoneWeight);
-        }
-
-        Savable[] lodLevelsSavable = in.readSavableArray("lodLevels", null);
-        if (lodLevelsSavable != null) {
-            lodLevels = new VertexBuffer[lodLevelsSavable.length];
-            System.arraycopy( lodLevelsSavable, 0, lodLevels, 0, lodLevels.length);
-        }
-    }
-
+	
+    
 }
